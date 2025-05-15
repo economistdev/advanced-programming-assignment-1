@@ -6,6 +6,7 @@ CFLAGS=-I.
 
 all: howManyDays.o
 	$(CC) -o howManyDays howManyDays.o $(CFLAGS)
+	./howManyDays  # <-- This runs the program
 
 clean:
 	rm -f *.o howManyDays
