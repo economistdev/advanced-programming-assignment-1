@@ -38,7 +38,7 @@ int days_in_month(int month, int year) {
 	}
 }
 
-int* days_between_dates(struct Date start_date, struct Date end_date, int *days_histogram, bool twelth_of_month) {
+int* days_between_dates(struct Date start_date, struct Date end_date, int *days_histogram, bool twelth_of_month_mode) {
 	struct Date date_cursor = start_date;
 	int day_of_week = 0;
 
@@ -52,16 +52,14 @@ int* days_between_dates(struct Date start_date, struct Date end_date, int *days_
 
 	while (cursor_leq_end_date(date_cursor, end_date)) {
 		int days_in_current_month = days_in_month(date_cursor.month, date_cursor.year);
-		//printf("%d days in curr month\n", days_in_current_month);
-		//printf("%d/%d/%d\n", date_cursor.day, date_cursor.month, date_cursor.year);
-		//printf("day of week: %d\n", day_of_week);
-
-		if ((twelth_of_month && date_cursor.day == 12) || (days_histogram[day_of_week] += 1)) {
+		
+		if ((twelth_of_month_mode && date_cursor.day == 12) || (!twelth_of_month_mode)) {
 			days_histogram[day_of_week] += 1;
 		}
 
+		
+		// increment the date cursor and day of week variables respectively
 		day_of_week = (day_of_week + 1) % 7;
-
 		if (date_cursor.day == days_in_current_month) {
 			if (date_cursor.month == 12) {
 				date_cursor.day = 1;
@@ -94,30 +92,32 @@ int howManyDays(void) {
 	struct Date date_start_main = (struct Date) {1, 1, 1401};
 	struct Date date_end_main = (struct Date) {31, 12, 1800};
 
-	// Get the historgram of days between dates (no mapping to index and actual day of week yet)
+	// Get the historgram of days between dates (no mapping for histogram index and actual day of week yet)
 	int days_histogram_main[7];
 	int days_histogram_main_on_twelth[7];
 	days_between_dates(date_start_main, date_end_main, days_histogram_main, false);
 	days_between_dates(date_start_main, date_end_main, days_histogram_main_on_twelth, true); // same as above but only for
 	//days falling on twelth of month
 
-	// Sum the histogram
-	int sum_days_main = sum_days_histogram(days_histogram_main);
+	
+	// Date to tuesday! We need this to map the main histogram back to an actual day
+	struct Date date_start_to_tuesday = (struct Date) {1, 1, 1801}; // + 1 from the end date of previous
+	struct Date date_end_to_tuesday = (struct Date) {18, 05, 2007}; //this is a tuesday
 
-	// Date to tuesday! We need this to map the dates histogram back to an actual day
-	struct Date date_start_to_tuesday = (struct Date) {1, 1, 1801};
-	struct Date date_end_to_tuesday = (struct Date) {18, 05, 2007};
-	// Get the historgram of days between dates again
+	// Get the historgram of days between dates again for next period
 	int days_histogram_to_tuesday[7];
 	days_between_dates(date_start_to_tuesday, date_end_to_tuesday, days_histogram_to_tuesday, false);
-	// Sum the histogram
-	int sum_days_to_tuesday = sum_days_histogram(days_histogram_to_tuesday);
 
-	// gets us to the index for monday
-	int hist_selected_index = (sum_days_to_tuesday + sum_days_main + 6) % 7; // +6 is to simulate tuesday to monday
+	// Sum the histograms between both periods
+	int total_days = sum_days_histogram(days_histogram_main) + sum_days_histogram(days_histogram_to_tuesday);
+
+	// gets us to the index for monday as we know where Tuesday lands
+	int hist_selected_index = (total_days - 1 + 6) % 7; // +6 is to simulate the -1 step back from tuesday to monday and -1 
+	// days because we want an offset
 
 	return days_histogram_main_on_twelth[hist_selected_index];
 }
+
 
 void test() {
 
@@ -127,17 +127,29 @@ void test() {
 	int days_histogram[7];
 	days_between_dates(date_start, date_end, days_histogram, false);
 	int sum_days = sum_days_histogram(days_histogram);
-	printf("test 1.1: %d\n", sum_days);
+	printf("test 1.1: %d\n", sum_days == 12);
+
+	//test 2.1: check 12th of month counts for mondays
+	date_start = (struct Date) {12, 6, 2023};
+	date_end = (struct Date) {15, 10, 2026};
+	days_between_dates(date_start, date_end, days_histogram, true);
+	printf("test 2.1: %d\n", days_histogram[0] == 6);
+
+	//test 3.1: check the day is tuesday (wednesday is index 0s)
+	date_start = (struct Date) {1, 1, 2025};
+	date_end = (struct Date) {31, 12, 2025};
+	days_histogram[7];
+	days_between_dates(date_start, date_end, days_histogram, false);
+	int day_index = (sum_days_histogram(days_histogram) + 6 - 1) % 7;
+	printf("test 3.1: %d\n", day_index == 6);
 
 }
 
 int main() {
-
+	
 	printf("%d\n", howManyDays());
 	//test();
-
+	
 	return 0;
-}
-
-
+}	
 
