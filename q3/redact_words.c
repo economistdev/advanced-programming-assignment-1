@@ -7,7 +7,8 @@
 #include <ctype.h>
 
 void clear_word_buffer(char *word_buffer) {
-	memset(word_buffer, '\0', sizeof(word_buffer));
+	int size_word = strlen(word_buffer);
+	memset(word_buffer, '\0', size_word);
 }
 
 struct WordNode {
@@ -22,7 +23,8 @@ struct WordList {
 struct WordList *new_word_list(void) {
 	struct WordList *new_list = (struct WordList *)malloc(sizeof(struct WordList));
 	new_list->head = NULL;
-};
+	return new_list;
+}
 
 void add_word_to_list(struct WordList *list, const char *word) {
 
@@ -57,7 +59,7 @@ struct WordList *parse_redacted_words(char *redact_buffer) {
 	
 	char curr_char = redact_buffer[0];
 	size_t curr_index = 0;
-	char word_buffer[50] = {0};
+	char word_buffer[500] = {0};
 	size_t word_buffer_index = 0;
 
 	while (true) {
@@ -89,11 +91,12 @@ void process_word(char *word_buffer, struct WordList *redact_list) {
 }
 
 void process_redaction(const char *input_buffer, char *output_buffer,struct WordList *redact_list) {
+	strcpy(output_buffer, input_buffer);
+
 	char curr_char = input_buffer[0];
-	output_buffer[0] = curr_char;
 	size_t curr_char_index = 0;
 
-	char word_buffer[50] = {0};
+	char word_buffer[500] = {0};
 	size_t word_buffer_index = 0;
 
 	size_t start_word_index = 0;
@@ -117,7 +120,7 @@ void process_redaction(const char *input_buffer, char *output_buffer,struct Word
 
 		}
 		curr_char = input_buffer[++curr_char_index];
-		output_buffer[curr_char_index] = curr_char;
+		//output_buffer[curr_char_index] = curr_char;
 	}
 }
 
@@ -127,9 +130,9 @@ void redact_words(const char *text_filename, const char *redact_words_filename) 
 	FILE *redact_fptr = fopen(redact_words_filename, "r");
 	FILE *output_fptr = fopen("result.txt", "w");
 
-	char input_buffer[1000] = {0};
-	char redact_buffer[1000] = {0};
-	char output_buffer[1000] = {0};
+	char input_buffer[100000] = {0};
+	char redact_buffer[100000] = {0};
+	char output_buffer[100000] = {0};
 
 	fgets(input_buffer, sizeof(input_buffer), input_fptr);
 	fgets(redact_buffer, sizeof(redact_buffer), redact_fptr);
