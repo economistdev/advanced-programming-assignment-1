@@ -19,41 +19,50 @@ char *get_grid_element(struct Grid *grid, int row, int col) {
 }
 
 void populate_grid(struct Grid *grid, char *msg) {
-	for (int i=0; i < grid->shape[0]; i++) {
-		printf("i = %d\n", i);
-		for (int j=0; j < grid->shape[1]; j++) {
-			printf("j = %d\n", j);
-			printf("element = %s\n", msg);
-			*get_grid_element(grid, i, j) = msg[i*grid->shape[1] + j];
+	for (int row=0; row < grid->shape[0]; row++) {
+		for (int col=0; col < grid->shape[1]; col++) {
+			*get_grid_element(grid, row, col) = msg[row*grid->shape[1] + col];
 		}
 	}
 }
 
 
-int *sort_asc(char *arr) {
-	int *sorted_idx = (int *)calloc(strlen(arr), sizeof(char));
+int *sort_asc(char *key) {
+	char *key_sorted = (char *)calloc(strlen(key)+1, sizeof(char));
+	memcpy(key_sorted, key, strlen(key));
+	int *key_sorted_idx = (int *)calloc(strlen(key), sizeof(int));
 	
-	for (int i = 0; i < (strlen(arr)-1); i++) {
+	for (int i = 0; i < (strlen(key)); i++) {
 		int smaller_idx = i;
-		for (int j = i+1; j < strlen(arr); j++) {
-			if (arr[i] > arr[j]) {
+		char smaller_val = key_sorted[i];
+		for (int j = i; j < strlen(key); j++) {
+			if (smaller_val > key_sorted[j]) {
 				smaller_idx = j;
+				smaller_val = key_sorted[j];
 			}
 		}
-		char temp = arr[i];
-		arr[i] = arr[smaller_idx];
-		arr[smaller_idx] = temp;
-		sorted_idx[i] = smaller_idx; //place the index in the sorted idx arr
+		char temp = key_sorted[i];
+		key_sorted[i] = smaller_val;
+		key_sorted[smaller_idx] = temp;
+
+	}
+	//find orig idx of smaller val
+	for (int i=0; i<strlen(key); i++) {
+		for (int j=0; j<strlen(key); j++) {
+			if (key_sorted[i] == key[j]) {
+				key_sorted_idx[i] = j;
+			}
+		}
 	}
 
-	return sorted_idx;
+	return key_sorted_idx;
 }
 
 void calculate_col_order_from_key(struct Grid *grid) {
 	char *key = (char *)calloc(grid->shape[1]+1, sizeof(char));
 	memcpy(key, grid->arr, grid->shape[1]);
 	grid->col_order = sort_asc(key);
-	
+
 	free(key);
 }
 
@@ -70,18 +79,17 @@ struct Grid *init_grid(int *shape, char *msg) { //shape[0] = rows, shape[1] == c
 }
 
 char *encrypt_grid(struct Grid *grid) {
-	char *encrypted_str = (char *)calloc(grid->size, sizeof(char));
+	char *encrypted_str = (char *)calloc((grid->shape[0]-1)*grid->shape[1], sizeof(char));
 
 	for (int row=0; row<grid->shape[0]; row++) {
 		for (int col=0; col<grid->shape[1]; col++) {
-			encrypted_str[row*grid->shape[0] + col] = *get_grid_element(grid, row, grid->col_order[col]);
+			encrypted_str[row*grid->shape[1] + col] = *get_grid_element(grid, row+1, grid->col_order[col]);
 
 		}
 	}
 
 	return encrypted_str;
 }
-
 
 char *combine_key_msg(int *shape, char *msg, char *key) {
 	int str_size = shape[0]*shape[1];
@@ -113,13 +121,13 @@ void encryption_find_dimensions(int *shape, char *msg, char *key) {
 	
 	int msg_rows = msg_len/col_len;
 
-	shape[0] = msg_rows+1; //+1 for the key row
+	shape[0] = ( 1 > msg_rows ? 1 : msg_rows) +1; //+1 for the key row
 	shape[1] = col_len;
 
 }
 
 char *read_string(const char *filename){
-	size_t file_size = 100000000;
+	size_t file_size = 10000000;
 
 	FILE *fptr = fopen(filename, "r");
 
@@ -127,6 +135,10 @@ char *read_string(const char *filename){
 	char *buffer_processed = (char *)calloc(file_size, sizeof(char));
 
 	fread(buffer, 1, file_size, fptr);
+	if (strlen(buffer) == 0) {
+		free(buffer);		
+		return buffer_processed;
+	}
 
 	size_t buffer_idx = 0;
 	size_t buffer_processed_idx = 0;
@@ -149,6 +161,13 @@ void encrypt_columnar(const char *message_filename, const char *key_filename, ch
 	char *msg = read_string(message_filename);
 	char *key = read_string(key_filename);
 
+	if (strlen(key) == 0) {
+		free(key);
+		free(msg);
+		*result = NULL;
+		return;
+	}
+
 	int shape[2];
 	encryption_find_dimensions(shape, msg, key);
 
@@ -157,6 +176,8 @@ void encrypt_columnar(const char *message_filename, const char *key_filename, ch
 	struct Grid *grid = init_grid(shape, combined_msg);
 
 	*result = encrypt_grid(grid);
+
+	free(combined_msg);
         
 }
 
