@@ -1,1 +1,3 @@
-dog, this!
+dog
+, brother
+, calling, priest

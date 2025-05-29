@@ -59,11 +59,13 @@ struct WordList *parse_redacted_words(char *redact_buffer) {
 	
 	char curr_char = redact_buffer[0];
 	size_t curr_index = 0;
-	char word_buffer[500] = {0};
+	char word_buffer[10000] = {0};
 	size_t word_buffer_index = 0;
 
+	int size_of_file = strlen(redact_buffer);
+
 	while (true) {
-		if (curr_char == '\n') {
+		if ((curr_char == '\n') && (size_of_file == curr_index+1)) {
 			if (word_buffer_index > 0) {
 				add_word_to_list(word_list, word_buffer);
 			}
@@ -96,13 +98,15 @@ void process_redaction(const char *input_buffer, char *output_buffer,struct Word
 	char curr_char = input_buffer[0];
 	size_t curr_char_index = 0;
 
-	char word_buffer[500] = {0};
+	char word_buffer[10000] = {0};
 	size_t word_buffer_index = 0;
 
 	size_t start_word_index = 0;
 
+	int size_of_file = strlen(output_buffer);
+
 	while(true) {
-		if (curr_char == '\n') {
+		if ((curr_char == '\n') && (size_of_file == curr_char_index+1)) {
 			if (word_buffer_index > 0) {
 				process_word(word_buffer, redact_list);
 				memcpy(output_buffer+start_word_index, word_buffer, strlen(word_buffer));
@@ -120,7 +124,6 @@ void process_redaction(const char *input_buffer, char *output_buffer,struct Word
 
 		}
 		curr_char = input_buffer[++curr_char_index];
-		//output_buffer[curr_char_index] = curr_char;
 	}
 }
 
@@ -130,12 +133,13 @@ void redact_words(const char *text_filename, const char *redact_words_filename) 
 	FILE *redact_fptr = fopen(redact_words_filename, "r");
 	FILE *output_fptr = fopen("result.txt", "w");
 
-	char input_buffer[100000] = {0};
-	char redact_buffer[100000] = {0};
-	char output_buffer[100000] = {0};
+	size_t file_size = 10000000;
+	char *input_buffer = (char *)calloc(file_size, sizeof(char));
+	char *redact_buffer = (char *)calloc(file_size, sizeof(char));
+	char *output_buffer = (char *)calloc(file_size, sizeof(char));
 
-	fgets(input_buffer, sizeof(input_buffer), input_fptr);
-	fgets(redact_buffer, sizeof(redact_buffer), redact_fptr);
+	fread(input_buffer, 1, file_size, input_fptr);
+	fread(redact_buffer,1, file_size, redact_fptr);
 
 	struct WordList *redact_list = parse_redacted_words(redact_buffer);
 
