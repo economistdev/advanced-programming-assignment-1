@@ -26,6 +26,18 @@ struct WordList *new_word_list(void) {
 	return new_list;
 }
 
+void free_word_list(struct WordList *list) {
+	struct WordNode *curr_node = list->head;
+	list->head = NULL;
+
+	struct WordNode *next_node;
+	while(curr_node != NULL) {
+		next_node = curr_node->next;
+		free(curr_node);
+		curr_node = next_node;
+	}
+}
+
 void add_word_to_list(struct WordList *list, const char *word) {
 
 	struct WordNode *new_node = (struct WordNode *)malloc(sizeof(struct WordNode));
@@ -59,13 +71,13 @@ struct WordList *parse_redacted_words(char *redact_buffer) {
 	
 	char curr_char = redact_buffer[0];
 	size_t curr_index = 0;
-	char word_buffer[10000] = {0};
+	char word_buffer[100000] = {0};
 	size_t word_buffer_index = 0;
 
 	int size_of_file = strlen(redact_buffer);
 
 	while (true) {
-		if ((curr_char == '\n') && (size_of_file == curr_index+1)) {
+		if (size_of_file == curr_index+1) {
 			if (word_buffer_index > 0) {
 				add_word_to_list(word_list, word_buffer);
 			}
@@ -98,15 +110,15 @@ void process_redaction(const char *input_buffer, char *output_buffer,struct Word
 	char curr_char = input_buffer[0];
 	size_t curr_char_index = 0;
 
-	char word_buffer[10000] = {0};
+	char word_buffer[100000] = {0};
 	size_t word_buffer_index = 0;
 
 	size_t start_word_index = 0;
 
 	int size_of_file = strlen(output_buffer);
-
+	
 	while(true) {
-		if ((curr_char == '\n') && (size_of_file == curr_char_index+1)) {
+		if ((size_of_file == curr_char_index+1)) {
 			if (word_buffer_index > 0) {
 				process_word(word_buffer, redact_list);
 				memcpy(output_buffer+start_word_index, word_buffer, strlen(word_buffer));
@@ -145,11 +157,17 @@ void redact_words(const char *text_filename, const char *redact_words_filename) 
 
 	process_redaction(input_buffer, output_buffer, redact_list);
 
+	free_word_list(redact_list);
+
 	fputs(output_buffer, output_fptr);
 
 	fclose(input_fptr);
 	fclose(redact_fptr);
 	fclose(output_fptr);
+
+	free(input_buffer);
+	free(redact_buffer);
+	free(output_buffer);
 
 	
 }

@@ -79,16 +79,29 @@ struct Grid *init_grid(int *shape, char *msg) { //shape[0] = rows, shape[1] == c
 }
 
 char *encrypt_grid(struct Grid *grid) {
-	char *encrypted_str = (char *)calloc((grid->shape[0]-1)*grid->shape[1], sizeof(char));
+	char *processed_str = (char *)calloc((grid->shape[0]-1)*grid->shape[1], sizeof(char));
 
 	for (int row=0; row<grid->shape[0]; row++) {
 		for (int col=0; col<grid->shape[1]; col++) {
-			encrypted_str[row*grid->shape[1] + col] = *get_grid_element(grid, row+1, grid->col_order[col]);
+			processed_str[row*grid->shape[1] + col] = *get_grid_element(grid, row+1, grid->col_order[col]);
 
 		}
 	}
 
-	return encrypted_str;
+	return processed_str;
+}
+
+char *decrypt_grid(struct Grid *grid) {
+	char *processed_str = (char *)calloc((grid->shape[0]-1)*grid->shape[1], sizeof(char));
+
+	for (int row=0; row<grid->shape[0]; row++) {
+		for (int col=0; col<grid->shape[1]; col++) {
+			processed_str[row*grid->shape[1] + grid->col_order[col]] = *get_grid_element(grid, row+1, col);
+
+		}
+	}
+
+	return processed_str;
 }
 
 char *combine_key_msg(int *shape, char *msg, char *key) {
@@ -121,7 +134,7 @@ void encryption_find_dimensions(int *shape, char *msg, char *key) {
 	
 	int msg_rows = msg_len/col_len;
 
-	shape[0] = ( 1 > msg_rows ? 1 : msg_rows) +1; //+1 for the key row
+	shape[0] = msg_rows +1; //+1 for the key row
 	shape[1] = col_len;
 
 }
@@ -182,7 +195,28 @@ void encrypt_columnar(const char *message_filename, const char *key_filename, ch
 }
 
 int decrypt_columnar(const char *message_filename, const char *key_filename, char **result){
-    return 1;   
+	char *msg = read_string(message_filename);
+	char *key = read_string(key_filename);
+
+	if (strlen(key) == 0) {
+		free(key);
+		free(msg);
+		*result = NULL;
+		return 0;
+	}
+
+	int shape[2];
+	encryption_find_dimensions(shape, msg, key);
+
+	char *combined_msg = combine_key_msg(shape, msg, key);
+
+	struct Grid *grid = init_grid(shape, combined_msg);
+
+	*result = decrypt_grid(grid);
+
+	free(combined_msg);
+
+	return 1;
 }
 
 void test() {
@@ -191,8 +225,21 @@ void test() {
 
 int main() {
 	char *test;
+	FILE *fptr = fopen("msg_encrypted.txt", "w");
+
+
 	encrypt_columnar("msg.txt", "key.txt", &test);
 	printf("encrypted str is: %s\n", test);
+
+	fputs(test, fptr);
+	free(test);
+	fclose(fptr);
+
+	int success = decrypt_columnar("msg_encrypted.txt", "key.txt", &test);
+	printf("success result is: %d\n", success);
+	printf("decrypted str is: %s\n", test);
+
+	
 	
 	return 0;
 }	

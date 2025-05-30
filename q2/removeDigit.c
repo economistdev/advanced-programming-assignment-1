@@ -38,6 +38,10 @@ void recursive_solve(int *solution_addr, int x, int n, int curr_a) {
 
 void removeDigit(int x, int n, int *a, int *b) {
 
+	if (x < 0 || x > 9) return;
+
+	if (n < 10 || n > 100000000) return;
+
 	int solution_addr[2] = {0};
 	recursive_solve(solution_addr, x, n, 1);
 	*a = solution_addr[0];
@@ -47,8 +51,8 @@ void removeDigit(int x, int n, int *a, int *b) {
 
 void test() {
 
-	int x = 0;
-	int n = 129;
+	int x = 1;
+	int n = 1000000;
 	int a, b;
 	a = b = 0;
 
