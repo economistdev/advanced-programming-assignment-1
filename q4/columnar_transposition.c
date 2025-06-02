@@ -78,6 +78,12 @@ struct Grid *init_grid(int *shape, char *msg) { //shape[0] = rows, shape[1] == c
 	return grid;
 }
 
+void free_grid(struct Grid *grid) {
+	free(grid->arr);
+	free(grid->col_order);
+	free(grid);
+}
+
 char *encrypt_grid(struct Grid *grid) {
 	char *processed_str = (char *)calloc((grid->shape[0]-1)*grid->shape[1], sizeof(char));
 
@@ -199,6 +205,7 @@ void encrypt_columnar(const char *message_filename, const char *key_filename, ch
 	*result = encrypt_grid(grid);
 
 	free(combined_msg);
+	free_grid(grid);
         
 }
 
@@ -227,6 +234,7 @@ int decrypt_columnar(const char *message_filename, const char *key_filename, cha
 	*result = decrypt_grid(grid);
 
 	free(combined_msg);
+	free_grid(grid);
 
 	return 1;
 }
