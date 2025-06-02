@@ -143,6 +143,9 @@ char *read_string(const char *filename){
 	size_t file_size = 10000000;
 
 	FILE *fptr = fopen(filename, "r");
+	if (fptr == NULL) {
+		return NULL;
+	}
 
 	char *buffer = (char *)calloc(file_size, sizeof(char));
 	char *buffer_processed = (char *)calloc(file_size, sizeof(char));
@@ -174,12 +177,17 @@ void encrypt_columnar(const char *message_filename, const char *key_filename, ch
 	char *msg = read_string(message_filename);
 	char *key = read_string(key_filename);
 
+	if (key == NULL) {
+		*result = NULL;
+		return;
+	}
 	if (strlen(key) == 0) {
 		free(key);
 		free(msg);
 		*result = NULL;
 		return;
 	}
+
 
 	int shape[2];
 	encryption_find_dimensions(shape, msg, key);
@@ -198,6 +206,10 @@ int decrypt_columnar(const char *message_filename, const char *key_filename, cha
 	char *msg = read_string(message_filename);
 	char *key = read_string(key_filename);
 
+	if (key == NULL) {
+		*result = NULL;
+		return 0;
+	}
 	if (strlen(key) == 0) {
 		free(key);
 		free(msg);
@@ -225,14 +237,16 @@ void test() {
 
 int main() {
 	char *test;
-	FILE *fptr = fopen("msg_encrypted.txt", "w");
+	FILE *fptr = fopen("msgz_encrypted.txt", "w");
 
 
-	encrypt_columnar("msg.txt", "key.txt", &test);
+	encrypt_columnar("msgz.txt", "keyz.txt", &test);
 	printf("encrypted str is: %s\n", test);
 
-	fputs(test, fptr);
-	free(test);
+	if (test != NULL) {
+		fputs(test, fptr);
+		free(test);
+	}
 	fclose(fptr);
 
 	int success = decrypt_columnar("msg_encrypted.txt", "key.txt", &test);
