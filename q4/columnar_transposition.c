@@ -6,6 +6,8 @@
 #include <stdlib.h>
 #include <ctype.h>
 
+#define MAX_LINE_SIZE 1024
+
 struct Grid {
 	int shape[2];
 	int size;
@@ -87,7 +89,7 @@ void free_grid(struct Grid *grid) {
 char *encrypt_grid(struct Grid *grid) {
 	char *processed_str = (char *)calloc((grid->shape[0]-1)*grid->shape[1], sizeof(char));
 
-	for (int row=0; row<grid->shape[0]; row++) {
+	for (int row=0; row<grid->shape[0]-1; row++) {
 		for (int col=0; col<grid->shape[1]; col++) {
 			processed_str[row*grid->shape[1] + col] = *get_grid_element(grid, row+1, grid->col_order[col]);
 
@@ -100,7 +102,7 @@ char *encrypt_grid(struct Grid *grid) {
 char *decrypt_grid(struct Grid *grid) {
 	char *processed_str = (char *)calloc((grid->shape[0]-1)*grid->shape[1], sizeof(char));
 
-	for (int row=0; row<grid->shape[0]; row++) {
+	for (int row=0; row<grid->shape[0]-1; row++) {
 		for (int col=0; col<grid->shape[1]; col++) {
 			processed_str[row*grid->shape[1] + grid->col_order[col]] = *get_grid_element(grid, row+1, col);
 
@@ -117,10 +119,8 @@ char *combine_key_msg(int *shape, char *msg, char *key) {
 	memcpy(combined_str, key, strlen(key));
 	memcpy(combined_str+strlen(key), msg, strlen(msg));
 
-	int padding_count = str_size - strlen(combined_str);
-	while (padding_count > 0) {
-		combined_str[str_size - padding_count] = 'X';
-		padding_count--;
+	for (size_t i = strlen(key) + strlen(msg); i < str_size; i++) {
+    	combined_str[i] = 'X';
 	}
 
 	free(msg);
@@ -133,6 +133,11 @@ char *combine_key_msg(int *shape, char *msg, char *key) {
 void encryption_find_dimensions(int *shape, char *msg, char *key) {
 	int col_len = strlen(key);
 	int msg_len = strlen(msg);
+
+	if (col_len == 0) {
+		shape[0] = 0;
+		shape[1] = 0;
+	}
 	
 	while (msg_len % col_len != 0) {
 		msg_len++;
@@ -146,21 +151,42 @@ void encryption_find_dimensions(int *shape, char *msg, char *key) {
 }
 
 char *read_string(const char *filename){
-	size_t file_size = 10000000;
-
+	size_t buffer_size = 10000;
+	
 	FILE *fptr = fopen(filename, "r");
 	if (fptr == NULL) {
 		return NULL;
 	}
-
-	char *buffer = (char *)calloc(file_size, sizeof(char));
-	char *buffer_processed = (char *)calloc(file_size, sizeof(char));
-
-	fread(buffer, 1, file_size, fptr);
-	if (strlen(buffer) == 0) {
-		free(buffer);		
-		return buffer_processed;
+	
+	
+	char *buffer = (char *)calloc(buffer_size, sizeof(char));
+	if (buffer == NULL) {
+		fclose(fptr);
+		return NULL;
 	}
+	
+	char line_buffer[MAX_LINE_SIZE] = {0};
+	size_t current_buffer_size = buffer_size;
+	size_t buffer_content_len = 0;
+	
+	while(fgets(line_buffer, MAX_LINE_SIZE, fptr) != NULL) {
+		size_t line_buffer_content_len = strlen(line_buffer);
+		while(current_buffer_size < (buffer_content_len+line_buffer_content_len+1)) {
+			buffer = realloc(buffer, current_buffer_size*2);
+			if (buffer == NULL){
+				free(buffer);
+				fclose(fptr);
+				return NULL;
+			}
+			current_buffer_size *= 2;
+		}
+
+		strcpy(buffer+buffer_content_len, line_buffer);
+		buffer_content_len += line_buffer_content_len;
+	}
+	fclose(fptr);
+	
+	char *buffer_processed = (char *)calloc(buffer_content_len+1, sizeof(char));
 
 	size_t buffer_idx = 0;
 	size_t buffer_processed_idx = 0;
@@ -194,7 +220,6 @@ void encrypt_columnar(const char *message_filename, const char *key_filename, ch
 		return;
 	}
 
-
 	int shape[2];
 	encryption_find_dimensions(shape, msg, key);
 
@@ -203,10 +228,9 @@ void encrypt_columnar(const char *message_filename, const char *key_filename, ch
 	struct Grid *grid = init_grid(shape, combined_msg);
 
 	*result = encrypt_grid(grid);
-
+	
 	free(combined_msg);
-	free_grid(grid);
-        
+	free_grid(grid);        
 }
 
 int decrypt_columnar(const char *message_filename, const char *key_filename, char **result){
@@ -245,13 +269,12 @@ void test() {
 
 int main() {
 	char *test;
-	FILE *fptr = fopen("msgz_encrypted.txt", "w");
+	FILE *fptr = fopen("msg_encrypted.txt", "w");
 
 
-	encrypt_columnar("msgz.txt", "keyz.txt", &test);
-	printf("encrypted str is: %s\n", test);
+	encrypt_columnar("msg.txt", "key.txt", &test);
 
-	if (test != NULL) {
+	if (test != "") {
 		fputs(test, fptr);
 		free(test);
 	}
@@ -259,7 +282,7 @@ int main() {
 
 	int success = decrypt_columnar("msg_encrypted.txt", "key.txt", &test);
 	printf("success result is: %d\n", success);
-	printf("decrypted str is: %s\n", test);
+	//printf("decrypted str is: %s\n", test);
 
 	
 	
